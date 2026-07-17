@@ -1,0 +1,49 @@
+class Solution {
+    // Sieve
+    static final int MX = 50_000;
+    static final int[] PRIMES;
+    static {
+        boolean[] comp = new boolean[MX + 1];
+        for (int p = 2; p * p <= MX; ++p)
+            if (!comp[p])
+                for (int k = p * p; k <= MX; k += p)
+                    comp[k] = true;
+        PRIMES = IntStream.rangeClosed(2, MX).filter(p -> !comp[p]).toArray();
+    }
+
+    public int[] gcdValues(int[] nums, long[] queries) {
+        int mx = Arrays.stream(nums).max().getAsInt();
+        int[] freq = new int[mx + 1];
+        for (int v : nums)
+            ++freq[v];
+
+        for (int p : PRIMES) {
+            if (p > mx) break;
+            for (int i = mx / p; i > 0; --i)
+                freq[i] += freq[i * p];
+        }
+
+        long[] g = Arrays.stream(freq).asLongStream().map(c -> c * (c - 1) / 2).toArray();
+
+        for (int p : PRIMES) {
+            if (p > mx) break;
+            for (int i = 1; i <= mx / p; ++i)
+                g[i] -= g[i * p];
+        }
+
+        long[] s = g.clone();
+        Arrays.parallelPrefix(s, Long::sum);
+
+        return Arrays.stream(queries).mapToInt(q -> upperBound(s, q)).toArray();
+    }
+
+    private int upperBound(long[] s, long q) {
+        int lo = 0, hi = s.length;
+        while (lo < hi) {
+            int mid = (lo + hi) >>> 1;
+            if (s[mid] > q) hi = mid;
+            else lo = mid + 1;
+        }
+        return lo;
+    }
+}
